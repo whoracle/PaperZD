@@ -21,6 +21,7 @@ class FPaperZDEditorModule : public IModuleInterface
 	TSharedPtr<class FAssetTypeActions_PaperZDAnimBP> AnimBPAssetTypeActions;
 	TSharedPtr<class FAssetTypeActions_ZDAnimSeq> AnimSequenceAssetTypeActions;
 	TSharedPtr<class FAssetTypeActions_ZDAnimationSource> AnimationSourceAssetTypeActions;
+	TSharedPtr<class FAssetTypeActions_ZDAnimationSkin> AnimationSkinAssetTypeActions;
 
 	//Graph Factory related
 	TSharedPtr<FPaperZDGraphNodeFactory> GraphNodeFactory;

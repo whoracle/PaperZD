@@ -22,7 +22,7 @@ private:
 
 public:
 	// IAssetTypeActions Implementation
-	virtual FText GetName() const override { return NSLOCTEXT("AssetTypeActions", "AssetTypeActions_ZDAnimSeq", "AnimationSequence"); }
+	virtual FText GetName() const override;
 	virtual FColor GetTypeColor() const override { return FColor(0, 175, 255); }
 	virtual UClass* GetSupportedClass() const override;
 	virtual void OpenAssetEditor(const TArray<UObject*>& InObjects, TSharedPtr<class IToolkitHost> EditWithinLevelEditor = TSharedPtr<IToolkitHost>()) override;

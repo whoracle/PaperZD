@@ -12,11 +12,9 @@
 #include "Widgets/SWindow.h"
 #include "Widgets/Layout/SBorder.h"
 #include "Notifies/PaperZDAnimNotifyCustom.h"
-#include "Kismet2/BlueprintEditorUtils.h"
 #include "Misc/ScopedSlowTask.h"
 #include "Framework/MultiBox/MultiBoxBuilder.h"
 #include "PaperZDEditor.h"
-
 #include "Editor.h"
 
 //Styles
@@ -27,9 +25,13 @@
 const FName FAssetTypeActions_ZDAnimSeq::CategoryKey = FName("PaperZD_AssetActionsKey");
 const FText FAssetTypeActions_ZDAnimSeq::CategoryDisplayName = FText::FromString("PaperZD");
 
-FAssetTypeActions_ZDAnimSeq::FAssetTypeActions_ZDAnimSeq(EAssetTypeCategories::Type InAssetCategory) :
-MyAssetCategory(InAssetCategory)
+FAssetTypeActions_ZDAnimSeq::FAssetTypeActions_ZDAnimSeq(EAssetTypeCategories::Type InAssetCategory)
+	: MyAssetCategory(InAssetCategory)
+{}
+
+FText FAssetTypeActions_ZDAnimSeq::GetName() const
 {
+	return NSLOCTEXT("AssetTypeActions", "AssetTypeActions_ZDAnimSeq", "AnimationSequence");
 }
 
 UClass* FAssetTypeActions_ZDAnimSeq::GetSupportedClass() const
