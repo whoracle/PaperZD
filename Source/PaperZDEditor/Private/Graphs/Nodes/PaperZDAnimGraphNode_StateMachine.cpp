@@ -202,11 +202,11 @@ void UPaperZDAnimGraphNode_StateMachine::OnProcessDuringCompilation(FPaperZDAnim
 
 	//Associate the source graph nodes with the runtime indices allocated below.
 	const UPaperZDAnimGraphNode_StateMachine* SourceStateMachineNode = InCompilationContext.GetMessageLog().FindSourceObjectTypeChecked<UPaperZDAnimGraphNode_StateMachine>(this);
-	FPaperZDAnimStateMachineDebugData* MachineDebugData = nullptr;
+	FGuid StateMachineDebugGuid;
 	if (SourceStateMachineNode->NodeGuid.IsValid())
 	{
-		MachineDebugData = &OutCompiledData.GetDebugData().StateMachineData.FindOrAdd(SourceStateMachineNode->NodeGuid);
-		MachineDebugData->StateMachineIndex = StateMachineIndex;
+		StateMachineDebugGuid = SourceStateMachineNode->NodeGuid;
+		OutCompiledData.GetDebugData().StateMachineData.FindOrAdd(StateMachineDebugGuid).StateMachineIndex = StateMachineIndex;
 	}
 	else
 	{
@@ -259,7 +259,7 @@ void UPaperZDAnimGraphNode_StateMachine::OnProcessDuringCompilation(FPaperZDAnim
 			const int32 BakedNodeIndex = StateMachine.Nodes.AddDefaulted();
 			FPaperZDAnimStateMachineNode& BakedNode = StateMachine.Nodes[BakedNodeIndex];
 			GraphNodeToStateMachineNodeId.Add(Node, BakedNodeIndex);
-			if (MachineDebugData)
+			if (FPaperZDAnimStateMachineDebugData* MachineDebugData = OutCompiledData.GetDebugData().StateMachineData.Find(StateMachineDebugGuid))
 			{
 				const UPaperZDStateGraphNode* SourceNode = Cast<UPaperZDStateGraphNode>(InCompilationContext.GetMessageLog().FindSourceObject(Node));
 				SourceNode = SourceNode ? SourceNode : Node;
@@ -349,7 +349,7 @@ void UPaperZDAnimGraphNode_StateMachine::OnProcessDuringCompilation(FPaperZDAnim
 			Link.TargetNodeIndex = GraphNodeToStateMachineNodeId[ToNode];
 			Link.TransitionRuleIndex = RuleIdx;
 
-			if (MachineDebugData)
+			if (FPaperZDAnimStateMachineDebugData* MachineDebugData = OutCompiledData.GetDebugData().StateMachineData.Find(StateMachineDebugGuid))
 			{
 				const UPaperZDStateGraphNode_Transition* SourceTransition = Cast<UPaperZDStateGraphNode_Transition>(InCompilationContext.GetMessageLog().FindSourceObject(GraphTransition));
 				SourceTransition = SourceTransition ? SourceTransition : GraphTransition;
