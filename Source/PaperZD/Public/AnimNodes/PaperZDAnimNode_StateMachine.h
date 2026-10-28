@@ -70,6 +70,17 @@ struct PAPERZD_API FPaperZDAnimNode_StateMachine : public FPaperZDAnimNode_Base
 	/* If true, the transitional animation graph has completed and should be popped on the next frame. */
 	bool bPopTransitionalAnimNode;
 
+#if WITH_EDITORONLY_DATA
+	/* Debug indices of the transitions taken by the most recent state change, including conduit paths. */
+	TArray<int32> RecentTransitionIndices;
+
+	/* Time since RecentTransitionIndices was last populated. */
+	float RecentTransitionElapsedTime;
+
+	/* Debug index of the transition whose transitional animation is currently playing. */
+	int32 ActiveTransitionIndex;
+#endif
+
 public:
 	//ctor
 	FPaperZDAnimNode_StateMachine();
@@ -83,6 +94,26 @@ public:
 	/* Obtain the name of the state machine linked to this node. */
 	FName GetMachineName() const;
 
+	/* Obtain the index of the state currently being evaluated. */
+	int32 GetCurrentStateIndex() const { return CurrentStateIndex; }
+
+	/* Obtain the time spent in the current state. */
+	float GetCurrentStateTime() const { return CurrentStateTime; }
+
+#if WITH_EDITORONLY_DATA
+	/* Obtain the transitions taken during the most recent state change. */
+	const TArray<int32>& GetRecentTransitionIndices() const { return RecentTransitionIndices; }
+
+	/* Obtain the time since the most recent transition chain was taken. */
+	float GetRecentTransitionElapsedTime() const { return RecentTransitionElapsedTime; }
+
+	/* Obtain the transition whose transitional animation is currently playing. */
+	int32 GetActiveTransitionIndex() const { return ActiveTransitionIndex; }
+
+	/* Obtain the lifetime of a recently taken transition visualization. */
+	static float GetDebugTransitionDisplayDuration() { return 0.2f; }
+#endif
+
 	/* Takes the given JumpLink and forcefully sets the new target state to the JumpNode's target. */
 	void JumpToNode(FName Name, const FPaperZDAnimationBaseContext& Context);
 
@@ -94,11 +125,16 @@ private:
 	bool CanEnterNode(int32 NodeIndex, const FNodeEvaluationContext& EvaluationContext) const;
 
 	/* Check the list of transitions on the given node and return whether any of the transitions can be taken. */
-	const FPaperZDAnimStateMachineLink* CheckValidTransition(int32 NodeIndex, FNodeEvaluationContext& EvaluationContext) const;
+	const FPaperZDAnimStateMachineLink* CheckValidTransition(int32 NodeIndex, FNodeEvaluationContext& EvaluationContext, TArray<int32>* OutTransitionPath = nullptr) const;
 
 	/* Returns the current AnimNode that should be updated/evaluated. */
 	FPaperZDAnimNode_Base* GetCurrentAnimNode() const { return CurrentTransitionalAnimNode ? CurrentTransitionalAnimNode : CurrentStateAnimNode; }
 
 	/* Calls the given event on the AnimInstance that owns this state machine. */
 	void CallEvent(FName Name, const FPaperZDAnimationBaseContext& Context);
+
+#if WITH_EDITORONLY_DATA
+	/* Clear all transient transition visualization data. */
+	void ResetDebugData();
+#endif
 };

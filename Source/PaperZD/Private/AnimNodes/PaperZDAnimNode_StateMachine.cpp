@@ -49,11 +49,19 @@ FPaperZDAnimNode_StateMachine::FPaperZDAnimNode_StateMachine()
 	, CurrentStateTime(0.0f)
 	, CurrentStateAnimNode(nullptr)
 	, CurrentTransitionalAnimNode(nullptr)
-	,bPopTransitionalAnimNode(false)
+	, bPopTransitionalAnimNode(false)
+#if WITH_EDITORONLY_DATA
+	, RecentTransitionElapsedTime(0.0f)
+	, ActiveTransitionIndex(INDEX_NONE)
+#endif
 {}
 
 void FPaperZDAnimNode_StateMachine::OnInitialize(const FPaperZDAnimationInitContext& InitContext)
 {
+#if WITH_EDITORONLY_DATA
+	ResetDebugData();
+#endif
+
 	//Cache state machine and initialize first state
 	UPaperZDAnimBPGeneratedClass* GeneratedClass = InitContext.GetAnimBPClass();
 	if (GeneratedClass->GetStateMachines().IsValidIndex(StateMachineIndex))
@@ -76,6 +84,19 @@ void FPaperZDAnimNode_StateMachine::OnUpdate(const FPaperZDAnimationUpdateContex
 {
 	if (CachedStateMachine && CurrentStateIndex != INDEX_NONE)
 	{
+#if WITH_EDITORONLY_DATA
+		if (RecentTransitionIndices.Num() > 0)
+		{
+			RecentTransitionElapsedTime += FMath::Max(0.0f, UpdateContext.DeltaTime);
+			if (RecentTransitionElapsedTime > GetDebugTransitionDisplayDuration())
+			{
+				RecentTransitionIndices.Reset();
+			}
+		}
+
+		TArray<int32> TransitionsTakenThisUpdate;
+#endif
+
 		//Transitional nodes need to be removed in a deferred way, because they complete their "AnimationComplete" callback while updating
 		//but by this point they haven't been evaluated and rendered.
 		//We proceed to pop the pending transitional anim node now, when its "Evaluate" method has already been called.
@@ -83,13 +104,31 @@ void FPaperZDAnimNode_StateMachine::OnUpdate(const FPaperZDAnimationUpdateContex
 		{
 			CurrentTransitionalAnimNode = nullptr;
 			bPopTransitionalAnimNode = false;
+#if WITH_EDITORONLY_DATA
+			ActiveTransitionIndex = INDEX_NONE;
+#endif
 		}
 
 		//Check for any pending state change
 		FNodeEvaluationContext Context(UpdateContext.AnimInstance);
 		Context.VisitedNodes.Add(CurrentStateIndex);
-		while (const FPaperZDAnimStateMachineLink* NextTransition = CheckValidTransition(CurrentStateIndex, Context))
+		while (true)
 		{
+#if WITH_EDITORONLY_DATA
+			TArray<int32> TransitionPath;
+			const FPaperZDAnimStateMachineLink* NextTransition = CheckValidTransition(CurrentStateIndex, Context, &TransitionPath);
+#else
+			const FPaperZDAnimStateMachineLink* NextTransition = CheckValidTransition(CurrentStateIndex, Context);
+#endif
+			if (!NextTransition)
+			{
+				break;
+			}
+
+#if WITH_EDITORONLY_DATA
+			TransitionsTakenThisUpdate.Append(TransitionPath);
+#endif
+
 			SetState(NextTransition->TargetNodeIndex, UpdateContext);
 			Context.VisitedNodes.Add(CurrentStateIndex);
 			
@@ -103,6 +142,9 @@ void FPaperZDAnimNode_StateMachine::OnUpdate(const FPaperZDAnimationUpdateContex
  				if (TransitionalAnimNode && TransitionalAnimNode->HasAnimationData())
  				{
 					CurrentTransitionalAnimNode = TransitionalAnimNode;
+#if WITH_EDITORONLY_DATA
+					ActiveTransitionIndex = NextTransition->DebugTransitionIndex;
+#endif
  				}
 			}
 
@@ -122,6 +164,14 @@ void FPaperZDAnimNode_StateMachine::OnUpdate(const FPaperZDAnimationUpdateContex
 				break;
 			}
 		}
+
+#if WITH_EDITORONLY_DATA
+		if (TransitionsTakenThisUpdate.Num() > 0)
+		{
+			RecentTransitionIndices = MoveTemp(TransitionsTakenThisUpdate);
+			RecentTransitionElapsedTime = 0.0f;
+		}
+#endif
 
 		//Increment time spent on this state
 		CurrentStateTime += UpdateContext.DeltaTime;
@@ -155,6 +205,9 @@ void FPaperZDAnimNode_StateMachine::JumpToNode(FName Name, const FPaperZDAnimati
 		const int32* pTargetNodeIdx = CachedStateMachine->JumpLinks.Find(Name);
 		if (pTargetNodeIdx)
 		{
+#if WITH_EDITORONLY_DATA
+			ResetDebugData();
+#endif
 			SetState(*pTargetNodeIdx, Context);
 
 			//Initialize the state
@@ -176,6 +229,9 @@ void FPaperZDAnimNode_StateMachine::SetState(int32 NewState, const FPaperZDAnima
 	CurrentStateAnimNode = Context.GetAnimBPClass()->GetAnimNodeByPropertyIndex(Context.AnimInstance, CachedStateMachine->Nodes[CurrentStateIndex].AnimNodeIndex);
 	CurrentStateTime = 0.0f;
 	CurrentTransitionalAnimNode = nullptr;
+#if WITH_EDITORONLY_DATA
+	ActiveTransitionIndex = INDEX_NONE;
+#endif
 
 	//Call the Enter State delegate if it exists
 	if (CachedStateMachine->Nodes.IsValidIndex(CurrentStateIndex) && !CachedStateMachine->Nodes[CurrentStateIndex].OnStateEnterEventName.IsNone())
@@ -204,8 +260,12 @@ bool FPaperZDAnimNode_StateMachine::CanEnterNode(int32 NodeIndex, const FNodeEva
 	return false;
 }
 
-const FPaperZDAnimStateMachineLink* FPaperZDAnimNode_StateMachine::CheckValidTransition(int32 NodeIndex, FNodeEvaluationContext& EvaluationContext) const
+const FPaperZDAnimStateMachineLink* FPaperZDAnimNode_StateMachine::CheckValidTransition(int32 NodeIndex, FNodeEvaluationContext& EvaluationContext, TArray<int32>* OutTransitionPath) const
 {
+#if !WITH_EDITORONLY_DATA
+	(void)OutTransitionPath;
+#endif
+
 	const FPaperZDAnimStateMachineNode& Node = CachedStateMachine->Nodes[NodeIndex];
 	for (const FPaperZDAnimStateMachineLink& LinkTransition : Node.OutwardLinks)
 	{
@@ -221,16 +281,37 @@ const FPaperZDAnimStateMachineLink* FPaperZDAnimNode_StateMachine::CheckValidTra
 				{
 					FNodeEvaluationContext ConduitEvalContext = EvaluationContext;
 					ConduitEvalContext.VisitedNodes.Add(LinkTransition.TargetNodeIndex);
+#if WITH_EDITORONLY_DATA
+					TArray<int32> ConduitTransitionPath;
+					const FPaperZDAnimStateMachineLink* ConduitLink = CheckValidTransition(LinkTransition.TargetNodeIndex, ConduitEvalContext, OutTransitionPath ? &ConduitTransitionPath : nullptr);
+#else
 					const FPaperZDAnimStateMachineLink* ConduitLink = CheckValidTransition(LinkTransition.TargetNodeIndex, ConduitEvalContext);
+#endif
 					if (ConduitLink)
 					{
 						EvaluationContext = MoveTemp(ConduitEvalContext);
+#if WITH_EDITORONLY_DATA
+						if (OutTransitionPath)
+						{
+							if (LinkTransition.DebugTransitionIndex != INDEX_NONE)
+							{
+								OutTransitionPath->Add(LinkTransition.DebugTransitionIndex);
+							}
+							OutTransitionPath->Append(ConduitTransitionPath);
+						}
+#endif
 						return ConduitLink;
 					}
 				}
 				else
 				{
 					//Valid target node
+#if WITH_EDITORONLY_DATA
+					if (OutTransitionPath && LinkTransition.DebugTransitionIndex != INDEX_NONE)
+					{
+						OutTransitionPath->Add(LinkTransition.DebugTransitionIndex);
+					}
+#endif
 					return &LinkTransition;
 				}
 			}
@@ -239,6 +320,15 @@ const FPaperZDAnimStateMachineLink* FPaperZDAnimNode_StateMachine::CheckValidTra
 
 	return nullptr;
 }
+
+#if WITH_EDITORONLY_DATA
+void FPaperZDAnimNode_StateMachine::ResetDebugData()
+{
+	RecentTransitionIndices.Reset();
+	RecentTransitionElapsedTime = 0.0f;
+	ActiveTransitionIndex = INDEX_NONE;
+}
+#endif
 
 void FPaperZDAnimNode_StateMachine::CallEvent(FName Name, const FPaperZDAnimationBaseContext& Context)
 {
