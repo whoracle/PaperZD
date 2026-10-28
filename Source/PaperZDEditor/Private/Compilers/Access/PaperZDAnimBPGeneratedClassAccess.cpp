@@ -12,6 +12,11 @@ TArray<FPaperZDAnimStateMachine>& FPaperZDAnimBPGeneratedClassAccess::GetStateMa
 	return GeneratedClass->StateMachines;
 }
 
+FPaperZDAnimBPDebugData& FPaperZDAnimBPGeneratedClassAccess::GetDebugData() const
+{
+	return GeneratedClass->DebugData;
+}
+
 TMap<FName, FPaperZDOverrideSlotDescriptor>& FPaperZDAnimBPGeneratedClassAccess::GetRegisteredOverrideSlots() const
 {
 	return GeneratedClass->RegisteredOverrideSlots;

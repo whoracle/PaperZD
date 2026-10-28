@@ -11,13 +11,34 @@ struct FPaperZDAnimNode_Sink;
 struct FPaperZDAnimNode_StateMachine;
 class UPaperZDAnimationSource;
 
-/**
- * Structure that holds the debug data for a given AnimBP class
- */
+/** Debug associations for a compiled state machine. */
+USTRUCT()
+struct PAPERZD_API FPaperZDAnimStateMachineDebugData
+{
+	GENERATED_BODY()
+
+	/* Index of the state machine definition on the generated class. */
+	UPROPERTY()
+	int32 StateMachineIndex = INDEX_NONE;
+
+	/* Maps state and conduit graph node GUIDs to their baked node indices. */
+	UPROPERTY()
+	TMap<FGuid, int32> StateNodeToIndex;
+
+	/* Maps transition graph node GUIDs to their baked debug transition indices. */
+	UPROPERTY()
+	TMap<FGuid, int32> TransitionNodeToIndex;
+};
+
+/** Structure that holds the debug data for a given AnimBP class. */
 USTRUCT()
 struct PAPERZD_API FPaperZDAnimBPDebugData
 {
 	GENERATED_BODY()
+
+	/* Debug associations keyed by the owning state machine graph node GUID. */
+	UPROPERTY()
+	TMap<FGuid, FPaperZDAnimStateMachineDebugData> StateMachineData;
 };
 
 /* Holds the descriptor for a slot override that has been registered to the class. */
@@ -58,6 +79,12 @@ class PAPERZD_API UPaperZDAnimBPGeneratedClass : public UBlueprintGeneratedClass
 	/* List of state machine definitions. */
 	UPROPERTY()
 	TArray<FPaperZDAnimStateMachine> StateMachines;
+
+#if WITH_EDITORONLY_DATA
+	/* Associations between editor graph nodes and their compiled runtime indices. */
+	UPROPERTY()
+	FPaperZDAnimBPDebugData DebugData;
+#endif
 
 	/* Mapping between Custom AnimNotify name to function name. */
 	UPROPERTY()
@@ -114,6 +141,11 @@ public:
 	
 	/* Get the list of state machine definitions. */
 	const TArray<FPaperZDAnimStateMachine>& GetStateMachines() const;
+
+#if WITH_EDITORONLY_DATA
+	/* Get the editor-only data used to associate graph nodes with runtime state. */
+	const FPaperZDAnimBPDebugData& GetDebugData() const;
+#endif
 
 	/* Obtain the type of AnimSequence supported by this class. */
 	const UPaperZDAnimationSource* GetSupportedAnimationSource() const;

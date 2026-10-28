@@ -58,6 +58,9 @@ void UPaperZDAnimBPGeneratedClass::PurgeClass(bool bRecompilingOnLoad)
 	AnimNodeProperties.Empty();
 	EvaluateGraphExposedInputs.Empty();
 	StateMachines.Empty();
+#if WITH_EDITORONLY_DATA
+	DebugData.StateMachineData.Empty();
+#endif
 	AnimNotifyFunctionMapping.Empty();
 	RegisteredOverrideSlots.Empty();
 	RootNodeProperty = nullptr;
@@ -156,6 +159,13 @@ const TArray<FPaperZDAnimStateMachine>& UPaperZDAnimBPGeneratedClass::GetStateMa
 {
 	return StateMachines;
 }
+
+#if WITH_EDITORONLY_DATA
+const FPaperZDAnimBPDebugData& UPaperZDAnimBPGeneratedClass::GetDebugData() const
+{
+	return DebugData;
+}
+#endif
 
 const UPaperZDAnimationSource* UPaperZDAnimBPGeneratedClass::GetSupportedAnimationSource() const
 {

@@ -57,12 +57,21 @@ struct FPaperZDAnimStateMachineLink
 	UPROPERTY()
 	int32 TransitionalAnimNodeIndex;
 
+#if WITH_EDITORONLY_DATA
+	/* Index used to associate this link with its transition graph node while debugging. */
+	UPROPERTY()
+	int32 DebugTransitionIndex;
+#endif
+
 public:
 	//ctor
 	FPaperZDAnimStateMachineLink()
 	: TransitionRuleIndex(INDEX_NONE)
 	, TargetNodeIndex(INDEX_NONE)
 	, TransitionalAnimNodeIndex(INDEX_NONE)
+#if WITH_EDITORONLY_DATA
+	, DebugTransitionIndex(INDEX_NONE)
+#endif
 	{}
 
 	//True is there's a transitional animation that should be played when passing through this link

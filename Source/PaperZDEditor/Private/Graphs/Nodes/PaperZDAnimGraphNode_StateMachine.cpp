@@ -200,6 +200,19 @@ void UPaperZDAnimGraphNode_StateMachine::OnProcessDuringCompilation(FPaperZDAnim
 	const int32 StateMachineIndex = OutCompiledData.GetStateMachines().AddDefaulted();
 	AnimNode.StateMachineIndex = StateMachineIndex;
 
+	//Associate the source graph nodes with the runtime indices allocated below.
+	const UPaperZDAnimGraphNode_StateMachine* SourceStateMachineNode = InCompilationContext.GetMessageLog().FindSourceObjectTypeChecked<UPaperZDAnimGraphNode_StateMachine>(this);
+	FPaperZDAnimStateMachineDebugData* MachineDebugData = nullptr;
+	if (SourceStateMachineNode->NodeGuid.IsValid())
+	{
+		MachineDebugData = &OutCompiledData.GetDebugData().StateMachineData.FindOrAdd(SourceStateMachineNode->NodeGuid);
+		MachineDebugData->StateMachineIndex = StateMachineIndex;
+	}
+	else
+	{
+		InCompilationContext.GetMessageLog().Warning(*LOCTEXT("InvalidStateMachineDebugGuid", "@@ has an invalid node GUID and cannot provide live debug data.").ToString(), SourceStateMachineNode);
+	}
+
 	//We need to store the state machine name inside, so JumpNodes can selectively work by comparing the machine name
 	//We never store the StateMachine variable anywhere, as it can become invalid due to internal state machine nodes modifying the containing array (by adding more machines to it)
 	{
@@ -246,6 +259,19 @@ void UPaperZDAnimGraphNode_StateMachine::OnProcessDuringCompilation(FPaperZDAnim
 			const int32 BakedNodeIndex = StateMachine.Nodes.AddDefaulted();
 			FPaperZDAnimStateMachineNode& BakedNode = StateMachine.Nodes[BakedNodeIndex];
 			GraphNodeToStateMachineNodeId.Add(Node, BakedNodeIndex);
+			if (MachineDebugData)
+			{
+				const UPaperZDStateGraphNode* SourceNode = Cast<UPaperZDStateGraphNode>(InCompilationContext.GetMessageLog().FindSourceObject(Node));
+				SourceNode = SourceNode ? SourceNode : Node;
+				if (SourceNode->NodeGuid.IsValid())
+				{
+					MachineDebugData->StateNodeToIndex.Add(SourceNode->NodeGuid, BakedNodeIndex);
+				}
+				else
+				{
+					InCompilationContext.GetMessageLog().Warning(*LOCTEXT("InvalidStateDebugGuid", "@@ has an invalid node GUID and cannot provide live debug data.").ToString(), SourceNode);
+				}
+			}
 			check(Node->GetBoundGraph());
 
 			//Setup the node
@@ -322,6 +348,21 @@ void UPaperZDAnimGraphNode_StateMachine::OnProcessDuringCompilation(FPaperZDAnim
 			FPaperZDAnimStateMachineLink& Link = BakedFromNode.OutwardLinks.AddDefaulted_GetRef();
 			Link.TargetNodeIndex = GraphNodeToStateMachineNodeId[ToNode];
 			Link.TransitionRuleIndex = RuleIdx;
+
+			if (MachineDebugData)
+			{
+				const UPaperZDStateGraphNode_Transition* SourceTransition = Cast<UPaperZDStateGraphNode_Transition>(InCompilationContext.GetMessageLog().FindSourceObject(GraphTransition));
+				SourceTransition = SourceTransition ? SourceTransition : GraphTransition;
+				if (SourceTransition->NodeGuid.IsValid())
+				{
+					Link.DebugTransitionIndex = MachineDebugData->TransitionNodeToIndex.Num();
+					MachineDebugData->TransitionNodeToIndex.Add(SourceTransition->NodeGuid, Link.DebugTransitionIndex);
+				}
+				else
+				{
+					InCompilationContext.GetMessageLog().Warning(*LOCTEXT("InvalidTransitionDebugGuid", "@@ has an invalid node GUID and cannot provide live debug data.").ToString(), SourceTransition);
+				}
+			}
 
 			//~~~~ Transitional AnimGraphs ~~~~
 			if (GraphTransition->HasTransitionalAnimations())

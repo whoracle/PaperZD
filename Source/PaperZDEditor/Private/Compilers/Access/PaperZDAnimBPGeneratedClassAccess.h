@@ -27,6 +27,9 @@ public:
 	/* Obtain the array of AnimStateMachine definitions. */
 	TArray<FPaperZDAnimStateMachine>& GetStateMachines() const;
 
+	/* Obtain the editor-only graph-to-runtime debug associations. */
+	FPaperZDAnimBPDebugData& GetDebugData() const;
+
 	/* Obtain the list of registered override slots, keyed by the slot name. */
 	TMap<FName, FPaperZDOverrideSlotDescriptor>& GetRegisteredOverrideSlots() const;
 };

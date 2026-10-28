@@ -2,6 +2,7 @@
 
 #include "Compilers/Handles/PaperZDAnimBPCompilerHandle_StateMachine.h"
 #include "Compilers/Access/PaperZDAnimBPCompilerAccess.h"
+#include "Compilers/Access/PaperZDAnimBPGeneratedClassAccess.h"
 #include "Graphs/Nodes/PaperZDAnimGraphNode_Base.h"
 #include "Graphs/Nodes/PaperZDTransitionGraphNode_Result.h"
 #include "Graphs/Nodes/PaperZDK2Node_AnimGetter.h"
@@ -126,6 +127,7 @@ void FPaperZDAnimBPCompilerHandle_StateMachine::ProcessTransitionGraph(UEdGraph*
 void FPaperZDAnimBPCompilerHandle_StateMachine::HandleStartCompilingClass(const UClass* InClass, FPaperZDAnimBPCompilerAccess& InCompilationContext, FPaperZDAnimBPGeneratedClassAccess& OutCompiledData)
 {
 	AnimGetterNodes.Empty();
+	OutCompiledData.GetDebugData().StateMachineData.Empty();
 }
 
 void FPaperZDAnimBPCompilerHandle_StateMachine::PostProcessAnimationNodes(TArrayView<UPaperZDAnimGraphNode_Base*> InAnimNodes, FPaperZDAnimBPCompilerAccess& InCompilationContext, FPaperZDAnimBPGeneratedClassAccess& OutCompiledData)
