@@ -1,6 +1,7 @@
 // Copyright 2017 ~ 2022 Critical Failure Studio Ltd. All rights reserved.
 
 #include "Graphs/Nodes/Slate/SPaperZDStateGraphNode_Transition.h"
+#include "Editors/Util/PaperZDAnimBPDebugUtils.h"
 #include "Editors/Util/PaperZDVersionCompatibility.h"
 #include "Graphs/Nodes/PaperZDStateGraphNode_Transition.h"
 #include "Graphs/Nodes/PaperZDTransitionGraphNode_Result.h"
@@ -27,6 +28,13 @@ void SPaperZDStateGraphNode_Transition::Construct(const FArguments& InArgs, UPap
 
 void SPaperZDStateGraphNode_Transition::GetNodeInfoPopups(FNodeInfoContext* Context, TArray<FGraphInformationPopupInfo>& Popups) const
 {
+	FPaperZDTransitionDebugInfo DebugInfo;
+	if (FPaperZDAnimBPDebugUtils::GetTransitionDebugInfo(GraphNode, DebugInfo) && DebugInfo.IsActive())
+	{
+		const FLinearColor ActiveColor(1.0f, 0.4f, 0.3f, 1.0f);
+		const TCHAR* Status = DebugInfo.bIsTransitionalAnimationPlaying ? TEXT("Transitional animation playing") : TEXT("Transition taken");
+		Popups.Emplace(nullptr, ActiveColor, Status);
+	}
 }
 
 void SPaperZDStateGraphNode_Transition::MoveTo(const ZD::Slate::FVector2& NewPosition, FNodeSet& NodeFilter, bool bMarkDirty /* = true */)
@@ -212,10 +220,22 @@ FLinearColor SPaperZDStateGraphNode_Transition::StaticGetTransitionColor(UPaperZ
 {
 	const FLinearColor ActiveColor(1.0f, 0.4f, 0.3f, 1.0f);
 	const FLinearColor HoverColor(0.724f, 0.256f, 0.0f, 1.0f);
-	//FLinearColor BaseColor(0.9f, 0.9f, 0.9f, 1.0f);
+	FLinearColor TransitionColor = TransNode->Color;
 
-	//@TODO: Add debug data colors and active / inactive status
-	return bIsHovered ? HoverColor : TransNode->Color;
+	FPaperZDTransitionDebugInfo DebugInfo;
+	if (FPaperZDAnimBPDebugUtils::GetTransitionDebugInfo(TransNode, DebugInfo))
+	{
+		if (DebugInfo.bIsTransitionalAnimationPlaying)
+		{
+			TransitionColor = ActiveColor;
+		}
+		else if (DebugInfo.bWasRecentlyTaken)
+		{
+			TransitionColor = FMath::Lerp(TransitionColor, ActiveColor, DebugInfo.RecentWeight);
+		}
+	}
+
+	return bIsHovered ? HoverColor : TransitionColor;
 }
 
 FSlateColor SPaperZDStateGraphNode_Transition::GetTransitionColor() const

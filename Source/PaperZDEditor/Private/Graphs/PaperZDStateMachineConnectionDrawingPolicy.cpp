@@ -1,6 +1,7 @@
 // Copyright 2017 ~ 2022 Critical Failure Studio Ltd. All rights reserved.
 
 #include "Graphs/PaperZDStateMachineConnectionDrawingPolicy.h"
+#include "Editors/Util/PaperZDAnimBPDebugUtils.h"
 #include "Graphs/Nodes/PaperZDStateGraphNode_Transition.h"
 #include "Graphs/Nodes/PaperZDStateGraphNode_Root.h"
 #include "Graphs/Nodes/PaperZDStateGraphNode_State.h"
@@ -24,6 +25,13 @@ void FPaperZDStateMachineConnectionDrawingPolicy::DetermineWiringStyle(UEdGraphP
 		if (UPaperZDStateGraphNode_Transition* TransNode = Cast<UPaperZDStateGraphNode_Transition>(InputPin->GetOwningNode()))
 		{
 			Params.WireColor = SPaperZDStateGraphNode_Transition::StaticGetTransitionColor(TransNode, HoveredPins.Contains(InputPin));
+
+			FPaperZDTransitionDebugInfo DebugInfo;
+			if (FPaperZDAnimBPDebugUtils::GetTransitionDebugInfo(TransNode, DebugInfo) && DebugInfo.IsActive())
+			{
+				Params.WireThickness = 3.0f;
+				Params.bDrawBubbles = true;
+			}
 		}
 	}
 

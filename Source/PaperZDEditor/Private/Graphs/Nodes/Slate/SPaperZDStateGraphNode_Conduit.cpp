@@ -1,6 +1,7 @@
 // Copyright 2017 ~ 2022 Critical Failure Studio Ltd. All rights reserved.
 
 #include "Graphs/Nodes/Slate/SPaperZDStateGraphNode_Conduit.h"
+#include "Editors/Util/PaperZDAnimBPDebugUtils.h"
 #include "Editors/Util/PaperZDVersionCompatibility.h"
 #include "Graphs/Nodes/PaperZDStateGraphNode_Conduit.h"
 #include "Widgets/SBoxPanel.h"
@@ -75,7 +76,12 @@ void SPaperZDStateGraphNode_Conduit::Construct(const FArguments& InArgs, UPaperZ
 
 void SPaperZDStateGraphNode_Conduit::GetStateInfoPopup(UEdGraphNode* GraphNode, TArray<FGraphInformationPopupInfo>& Popups)
 {
-	//@TODO: Add state info when Debug data is added
+	FPaperZDStateDebugInfo DebugInfo;
+	if (FPaperZDAnimBPDebugUtils::GetStateDebugInfo(GraphNode, DebugInfo) && DebugInfo.bWasRecentlyTraversed)
+	{
+		const FLinearColor TraversedColor = FMath::Lerp(FLinearColor(0.4f, 0.3f, 0.15f), FLinearColor(1.0f, 0.6f, 0.35f), DebugInfo.RecentWeight);
+		Popups.Emplace(nullptr, TraversedColor, TEXT("Conduit traversed"));
+	}
 }
 
 void SPaperZDStateGraphNode_Conduit::GetNodeInfoPopups(FNodeInfoContext* Context, TArray<FGraphInformationPopupInfo>& Popups) const
@@ -89,7 +95,11 @@ FSlateColor SPaperZDStateGraphNode_Conduit::GetBorderBackgroundColor() const
 	FLinearColor ActiveStateColorDim(0.4f, 0.3f, 0.15f);
 	FLinearColor ActiveStateColorBright(1.f, 0.6f, 0.35f);
 
-	//@TODO: Use the other colors when Debug Data is available
+	FPaperZDStateDebugInfo DebugInfo;
+	if (FPaperZDAnimBPDebugUtils::GetStateDebugInfo(GraphNode, DebugInfo) && DebugInfo.bWasRecentlyTraversed)
+	{
+		return FMath::Lerp(ActiveStateColorDim, ActiveStateColorBright, DebugInfo.RecentWeight);
+	}
 
 	return InactiveStateColor;
 }

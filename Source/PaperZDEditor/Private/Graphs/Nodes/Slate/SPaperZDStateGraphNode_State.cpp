@@ -1,6 +1,7 @@
 // Copyright 2017 ~ 2022 Critical Failure Studio Ltd. All rights reserved.
 
 #include "Graphs/Nodes/Slate/SPaperZDStateGraphNode_State.h"
+#include "Editors/Util/PaperZDAnimBPDebugUtils.h"
 #include "Editors/Util/PaperZDVersionCompatibility.h"
 #include "Graphs/Nodes/PaperZDStateGraphNode_State.h"
 #include "Widgets/SBoxPanel.h"
@@ -78,7 +79,12 @@ void SPaperZDStateGraphNode_State::Construct(const FArguments& InArgs, UPaperZDS
 
 void SPaperZDStateGraphNode_State::GetStateInfoPopup(UEdGraphNode* GraphNode, TArray<FGraphInformationPopupInfo>& Popups)
 {
-	//@TODO: Add state info when Debug data is added
+	FPaperZDStateDebugInfo DebugInfo;
+	if (FPaperZDAnimBPDebugUtils::GetStateDebugInfo(GraphNode, DebugInfo) && DebugInfo.bIsActive)
+	{
+		const FLinearColor ActiveStateColor(1.0f, 0.6f, 0.35f);
+		Popups.Emplace(nullptr, ActiveStateColor, FString::Printf(TEXT("Active for %.2f s"), DebugInfo.ElapsedTime));
+	}
 }
 
 void SPaperZDStateGraphNode_State::GetNodeInfoPopups(FNodeInfoContext* Context, TArray<FGraphInformationPopupInfo>& Popups) const
@@ -92,7 +98,11 @@ FSlateColor SPaperZDStateGraphNode_State::GetBorderBackgroundColor() const
 	FLinearColor ActiveStateColorDim(0.4f, 0.3f, 0.15f);
 	FLinearColor ActiveStateColorBright(1.f, 0.6f, 0.35f);
 
-	//@TODO: Use the other colors when Debug Data is available
+	FPaperZDStateDebugInfo DebugInfo;
+	if (FPaperZDAnimBPDebugUtils::GetStateDebugInfo(GraphNode, DebugInfo) && DebugInfo.bIsActive)
+	{
+		return ActiveStateColorBright;
+	}
 
 	return InactiveStateColor;
 }
